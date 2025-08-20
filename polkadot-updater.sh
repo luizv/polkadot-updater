@@ -16,6 +16,20 @@ if [[ -f "$CONFIG_FILE" ]]; then
   source "$CONFIG_FILE"
 fi
 
+
+###############################################################################
+# SERVER_SCOPE
+# --------------------------------------------------------------------------- #
+# The default Alertmanager scope key used for server-level alerts.
+#
+# • This variable defines which key in AM_URLS is used for general
+# or server-wide alerts.
+# • Can be overridden in the config file if a different scope name is needed.
+# • Default: "server"
+###############################################################################
+SERVER_SCOPE=${DEFAULT_ALERT_SCOPE:-"server"}
+
+
 ###############################################################################
 # ALERTMANAGER_URLS
 # --------------------------------------------------------------------------- #
@@ -37,7 +51,7 @@ if [[ -z "${AM_URLS_RAW:-}" ]]; then
   echo "    Define at least one mapping, e.g.:"
   echo '    AM_URLS_RAW="server=http://127.0.0.1:9090/api/v2/alerts"'
 
-  error_alert  server  "unknown"  warning \
+  error_alert  "$SERVER_SCOPE"  "unknown"  warning \
     "polkadot-updater mis-configuration" \
     "AM_URLS_RAW is missing in $CONFIG_FILE"
 
@@ -56,7 +70,7 @@ done <<< "$AM_URLS_RAW"
 if ((${#AM_URLS[@]} == 0)); then
   echo "$(date +%T) ❌ AM_URLS_RAW contained no valid key=url pairs"
 
-  error_alert  server  "unknown"  warning \
+  error_alert  "$SERVER_SCOPE"  "unknown"  warning \
     "polkadot-updater mis-configuration" \
     "AM_URLS_RAW had no usable entries after parsing"
 
@@ -243,7 +257,7 @@ if declare -p SERVICE_LIST 2>/dev/null | grep -q 'declare -a'; then
   if ((${#SERVICE_LIST[@]} == 0)); then
     echo "$(date +%T) ❌ SERVICE_LIST is empty in $CONFIG_FILE"
 
-    error_alert  server  "unknown"  warning \
+    error_alert  "$SERVER_SCOPE"  "unknown"  warning \
       "polkadot-updater mis-configuration" \
       "SERVICE_LIST array is declared but empty"
 
@@ -255,7 +269,7 @@ else
   echo "    Add something like:"
   echo "    SERVICE_LIST=(validator@kusama polkadot-validator)"
 
-  error_alert  server  "unknown"  warning \
+  error_alert  "$SERVER_SCOPE"  "unknown"  warning \
     "polkadot-updater mis-configuration" \
     "SERVICE_LIST array is missing in $CONFIG_FILE"
 
@@ -389,7 +403,7 @@ rollback() {
   start_services "$LAST_TAG"
 
   # Alert the humans (only if alerting is enabled)
-  error_alert server "$LAST_TAG" critical \
+  error_alert "$SERVER_SCOPE" "$LAST_TAG" critical \
     "Rollback performed" \
     "Reverted to $LAST_TAG after update failure."
 }
@@ -474,7 +488,7 @@ if [[ "$STRIPPED_TAG" == "$LAST_TAG" ]]; then
 fi
 
 echo "$(date +%T) ⚠️ New stable version available: $LATEST_TAG (published at $LATEST_PUBLISHED)"
-open_update_alert server "$STRIPPED_TAG" info "New Polkadot version available" "Found $LATEST_TAG (published $LATEST_PUBLISHED). Last known: $LAST_TAG."
+open_update_alert "$SERVER_SCOPE" "$STRIPPED_TAG" info "New Polkadot version available" "Found $LATEST_TAG (published $LATEST_PUBLISHED). Last known: $LAST_TAG."
 
 ###############################################################################
 # DOWNLOAD_INSTALL
@@ -524,7 +538,7 @@ for bin in "${BINARIES[@]}"; do
     echo "$(date +%T) ✅ Signature valid for $bin"
   else
     echo "$(date +%T) ❌ Invalid GPG signature for $bin. Aborting."
-    error_alert server "$STRIPPED_TAG" critical "Polkadot update failed" "Invalid GPG signature for $bin."
+    error_alert "$SERVER_SCOPE" "$STRIPPED_TAG" critical "Polkadot update failed" "Invalid GPG signature for $bin."
     exit 1
   fi
   echo
@@ -645,7 +659,7 @@ EOF
 
 # ---------- 5.  Resolve alert ------------------------------------------------
 echo "$(date +%T) ✅ Tracking file updated with version $NEW_VERSION ($STRIPPED_TAG)"
-resolve_update_alert server "$STRIPPED_TAG" info "Polkadot update completed" "Updated to $NEW_VERSION ($STRIPPED_TAG) successfully."
+resolve_update_alert "$SERVER_SCOPE" "$STRIPPED_TAG" info "Polkadot update completed" "Updated to $NEW_VERSION ($STRIPPED_TAG) successfully."
 
 # ---------- 6.  Prune old archives (keep newest +1) --------------------------
 echo "$(date +%T) 🧹 Cleaning up old archives (keeping latest + one previous)..."
