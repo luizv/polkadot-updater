@@ -1,0 +1,9 @@
+[Unit]
+Description=Polkadot Updater
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/polkadot-updater.sh
+User=root
