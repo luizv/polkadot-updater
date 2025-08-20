@@ -1,0 +1,38 @@
+route:
+  # Default: STATEFUL	prometheus alerts
+  receiver: ops-email
+  group_by: ["alertname", "instance", "severity"]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 3h
+
+  routes:
+    # Stateless EVENT alerts from polkadot-updater
+    - matchers:
+        - source="polkadot-updater"
+      receiver: updater-email
+      group_by: [] # treat each POST as a single event
+      group_wait: 0s
+      group_interval: 1s
+      continue: false
+
+receivers:
+  - name: ops-email
+    email_configs:
+      - to: [destination@email.com]
+        from: [email@gmail.com]
+        smarthost: smtp.gmail.com:587
+        auth_username: [email@gmail.com]
+        auth_identity: [email@gmail.com]
+        auth_password: "xxx"
+        send_resolved: true # keep "Resolved" for metrics-based alerts
+
+  - name: updater-email
+    email_configs:
+      - to: [destination@email.com]
+        from: [email@gmail.com]
+        smarthost: smtp.gmail.com:587
+        auth_username: [email@gmail.com]
+        auth_identity: [email@gmail.com]
+        auth_password: "xxx"
+        send_resolved: false # no "Resolved" emails for event pings
