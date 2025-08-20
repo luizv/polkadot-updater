@@ -16,6 +16,22 @@ if [[ -f "$CONFIG_FILE" ]]; then
   source "$CONFIG_FILE"
 fi
 
+###############################################################################
+# ALERT_SWITCH
+# --------------------------------------------------------------------------- #
+# Decide whether the script should actually POST alerts to Alertmanager.
+#
+#   • ENABLE_ALERTS can be set in CONFIG_FILE.
+#   • Accepted truth-y values (case-insensitive):  yes | true | 1
+#   • Anything else (or unset) disables alerting.  The script will keep
+#     running; _post_alert_payload simply prints a log line and returns 0.
+###############################################################################
+ENABLE_ALERTS=${ENABLE_ALERTS:-false}
+
+case "${ENABLE_ALERTS,,}" in
+  yes|true|1) ENABLE_ALERTS=true  ;;
+  *)          ENABLE_ALERTS=false ;;
+esac
 
 ###############################################################################
 # SERVER_SCOPE
@@ -77,23 +93,39 @@ if ((${#AM_URLS[@]} == 0)); then
   exit 1
 fi
 
-
 ###############################################################################
-# ALERT_SWITCH
+# validate_scope_mappings
 # --------------------------------------------------------------------------- #
-# Decide whether the script should actually POST alerts to Alertmanager.
-#
-#   • ENABLE_ALERTS can be set in CONFIG_FILE.
-#   • Accepted truth-y values (case-insensitive):  yes | true | 1
-#   • Anything else (or unset) disables alerting.  The script will keep
-#     running; _post_alert_payload simply prints a log line and returns 0.
+# Abort with an error_alert if any required scope lacks an Alertmanager URL.
+# Called once, **after** AM_URLS has been populated and SERVICES is set.
 ###############################################################################
-ENABLE_ALERTS=${ENABLE_ALERTS:-false}
+validate_scope_mappings() {
+  [[ $ENABLE_ALERTS != true ]] && return     # skip when alerting is off
 
-case "${ENABLE_ALERTS,,}" in
-  yes|true|1) ENABLE_ALERTS=true  ;;
-  *)          ENABLE_ALERTS=false ;;
-esac
+  local missing_scopes=()
+  local default_scope=$SERVER_SCOPE
+
+  # default / server-level scope
+  [[ -z "${AM_URLS[$default_scope]+_}" ]] && missing_scopes+=("$default_scope")
+
+  # one scope per systemd service
+  for svc in "${SERVICES[@]}"; do
+    local scope
+    scope=$("$svc")
+    [[ -z "${AM_URLS[$scope]+_}" ]] && missing_scopes+=("$scope")
+  done
+
+  # any gaps → abort
+  if ((${#missing_scopes[@]})); then
+    local msg="No Alertmanager URL mapping for scope(s): ${missing_scopes[*]}"
+    echo "$(date +%T) ❌ $msg"
+    error_alert "$default_scope" "unknown" warning \
+      "polkadot-updater mis-configuration" "$msg"
+    exit 1
+  fi
+}
+
+validate_scope_mappings
 
 ###############################################################################
 # POST_HELPER
@@ -231,6 +263,7 @@ ARCHIVE_DIR=${ARCHIVE_DIR:-/opt/polkadot/archive} # where old ones are saved
 TRACKING_DIR=${TRACKING_DIR:-/var/lib/polkadot-updater}
 LOG_FILE=${LOG_FILE:-/var/log/polkadot-updater.log}
 GPG_KEY=${GPG_KEY:-90BD75EBBB8E95CB3DA6078F94A4029AB4B35DAE}
+
 
 #############
 # ROLLBACK VARIABLES & FLAGS
