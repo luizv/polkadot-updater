@@ -29,11 +29,13 @@ TRACKING_DIR=/var/lib/polkadot-updater
 LOG_FILE=/var/log/polkadot-updater.log
 
 
-# --- Systemd unit names to stop/start around the swap  ----------------------
-#   List as a Bash array.  Adapt to your own naming convention.
+# --- Systemd validator unit names to stop/start around the swap  ------------
+#   List as a Bash array. Adapt to your own naming convention.
+#   These should be the names of systemd services that control your Polkadot/Kusama nodes.
+#   The updater will stop and start these services during upgrades.
 #   Examples:
 #     SERVICE_LIST=(validator@polkadot1 validator@kusama1)
-#     SERVICE_LIST=(polkadot-service)
+#     SERVICE_LIST=(polkadot-validator)
 SERVICE_LIST=(validator@polkadot1 validator@kusama1)
 
 
@@ -49,16 +51,27 @@ GPG_KEY=90BD75EBBB8E95CB3DA6078F94A4029AB4B35DAE
 # Set to "yes" to send alerts with AM. Anything else → alerting is skipped.
 ENABLE_ALERTS=yes
 
+
+# DEFAULT_ALERT_SCOPE sets the scope name used for server-level alerts.
+# This value should match a key defined in AM_URLS_RAW.
+# If not set, the script defaults to "server".
+# Change this if you want alerts to use a different scope name.
+DEFAULT_ALERT_SCOPE="server"
+
+
 # --- Alertmanager destinations  --------------------------------------------
 #   Each line has a pair:  key=urls
 #   ‘key’ must match whatever you pass as the first arg to open_update_alert /
-#   error_alert etc.  Example below covers:
-#     • a generic “server” scope
+#   error_alert etc.
+#   Keys must match DEFAULT_ALERT_SCOPE and all service keys in SERVICE_LIST.
+#   Example below covers:
+#     • a generic “server” scope (matches DEFAULT_ALERT_SCOPE)
+#     • a polkadot1-specific scope
 #     • a kusama1-specific scope
-#   'urls' should have one or more alert manager destinations, and should be
-#   separated by ";" .
-#   Feel free to remove kusama1 entry if you only run one chain.
+#   'urls' should have one or more alert manager destinations, separated by ";" .
+#   Remove unused entries if you only run one chain.
 AM_URLS_RAW="
 server=http://127.0.0.1:9090/api/v2/alerts;http://127.0.0.1:9091/api/v2/alerts
-kusama1=http://127.0.0.1:9091/api/v2/alerts
+validator@polkadot1=http://127.0.0.1:9090/api/v2/alerts
+validator@kusama1=http://127.0.0.1:9091/api/v2/alerts
 "
