@@ -15,7 +15,7 @@ on bare-metal or VM hosts running systemd.
   any schedule you prefer) via a systemd timer.
 * **No root FS clutter** – archives go to `/opt/polkadot/archive`,
   metadata lives in `/var/lib/polkadot-updater`, logs in
-  `/var/log/polkadot-updater.log`.
+  `/var/log/polkadot-updater.log` (customizable on `.conf`)`.
 
 ---
 
