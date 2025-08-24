@@ -34,7 +34,7 @@ Create a `polkadot-updater.conf` on `/etc/`. Use our `polkadot-updater.conf.exam
 Setup `polkadot-updater.conf` setting all paths and required variables.
 ```bash
 sudo install -m 644 polkadot-updater.conf.example /etc/polkadot-updater.conf
-sudo ${EDITOR:-nano} /etc/polkadot-updater.conf   
+sudo ${EDITOR:-nano} /etc/polkadot-updater.conf
 ```
 
 ### 2. Create the directories
@@ -81,7 +81,13 @@ sudo cat /var/log/polkadot-updater.log
 
 ---
 
-## Quick install (all defaults)
+## Quick install (WIP)
+1. Run `set-conf.sh` to set `.conf` file to the `/etc/` directory and edit it.
+```bash
+curl -fsS https://raw.githubusercontent.com/luizv/polkadot-updater/main/set-conf.sh | sudo bash
+```
 
+2. Run `install.sh` to copy the updarter script and systemd units, and enable it.
 ```bash
 curl -fsS https://raw.githubusercontent.com/luizv/polkadot-updater/main/install.sh | sudo bash
+```
