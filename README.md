@@ -27,6 +27,60 @@ on bare-metal or VM hosts running systemd.
 
 ---
 
+## Manual Install
+
+### 1. Copy & edit the config
+Create a `polkadot-updater.conf` on `/etc/`. Use our `polkadot-updater.conf.example` as template.
+Setup `polkadot-updater.conf` setting all paths and required variables.
+```bash
+sudo install -m 644 polkadot-updater.conf.example /etc/polkadot-updater.conf
+sudo ${EDITOR:-nano} /etc/polkadot-updater.conf   
+```
+
+### 2. Create the directories
+Make sure you create all the directories and files specified on `polkadot-updater.conf`.
+```bash
+# create runtime directories (ARCHIVE_DIR & TRACKING_DIR) with 755 perms
+sudo bash -c 'source /etc/polkadot-updater.conf &&
+              install -d -m 755 "$ARCHIVE_DIR" "$TRACKING_DIR"'
+
+# create / initialise the log file defined in LOG_FILE
+sudo bash -c 'source /etc/polkadot-updater.conf &&
+              touch "$LOG_FILE" &&
+              chmod 644 "$LOG_FILE"'
+```
+
+### 3. Install the script
+Install `polkadot-updater.sh` on the designed path on `.conf`.
+```bash
+sudo bash -c 'source /etc/polkadot-updater.conf &&
+              install -m 755 polkadot-updater.sh "$INSTALL_DIR/"'
+```
+
+### 4. Systemd Service & Timer
+Copy `polkadot-updater.timer` and `polkadot-updater.service` unit files into systemd, then enable them.
+```bash
+sudo install -m 644 polkadot-updater.{service,timer} /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now polkadot-updater.timer
+```
+
+#### 4.1 Verify
+Couple of commands to check things out.
+```bash
+# confirm timer schedule
+systemctl list-timers --all | grep polkadot-updater
+
+# dry-run once right now
+sudo systemctl start polkadot-updater.service
+sudo journalctl -u polkadot-updater.service -n 30 --no-pager
+
+# watch the updater’s own log
+sudo cat /var/log/polkadot-updater.log
+```
+
+---
+
 ## Quick install (all defaults)
 
 ```bash
